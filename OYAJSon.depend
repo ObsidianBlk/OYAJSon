@@ -1,0 +1,21 @@
+# depslib dependency file v1.0
+1422107607 source:/home/obsidianblk/Development/Testing/OYAJSon/src/OYAJSon.cpp
+	"OYAJSon.h"
+	<stdexcept>
+	<regex>
+
+1422107589 /home/obsidianblk/Development/Testing/OYAJSon/src/OYAJSon.h
+	<algorithm>
+	<memory>
+	<sstream>
+	<string>
+	<map>
+	<vector>
+
+1422106202 source:/home/obsidianblk/Development/Testing/OYAJSon/main.cpp
+	<iostream>
+	<fstream>
+	<string>
+	<map>
+	"src/OYAJSon.h"
+
