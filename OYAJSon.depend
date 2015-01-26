@@ -1,21 +1,42 @@
 # depslib dependency file v1.0
-1422107607 source:/home/obsidianblk/Development/Testing/OYAJSon/src/OYAJSon.cpp
+1422295243 source:/home/obsidianblk/Development/Testing/OYAJSon/src/OYAJSon.cpp
 	"OYAJSon.h"
 	<stdexcept>
 	<regex>
 
-1422107589 /home/obsidianblk/Development/Testing/OYAJSon/src/OYAJSon.h
+1422295225 /home/obsidianblk/Development/Testing/OYAJSon/src/OYAJSon.h
 	<algorithm>
 	<memory>
 	<sstream>
 	<string>
 	<map>
 	<vector>
+	<initializer_list>
 
-1422106202 source:/home/obsidianblk/Development/Testing/OYAJSon/main.cpp
+1422308982 source:/home/obsidianblk/Development/Testing/OYAJSon/main.cpp
 	<iostream>
 	<fstream>
 	<string>
 	<map>
-	"src/OYAJSon.h"
+	<assert.h>
+	"OYAJSon/OYAJSon.h"
+
+1422309891 /home/obsidianblk/Development/Testing/OYAJSon/OYAJSon/OYAJSon.h
+	<algorithm>
+	<memory>
+	<sstream>
+	<string>
+	<map>
+	<vector>
+	<initializer_list>
+
+1422308947 /home/obsidianblk/Development/Testing/OYAJSon/OYAJSon/version.h
+
+1422295243 source:/home/obsidianblk/Development/Testing/OYAJSon/OYAJSon/OYAJSon.cpp
+	"OYAJSon.h"
+	<stdexcept>
+	<regex>
+
+1422308947 source:/home/obsidianblk/Development/Testing/OYAJSon/OYAJSon/version.cpp
+	"version.h"
 

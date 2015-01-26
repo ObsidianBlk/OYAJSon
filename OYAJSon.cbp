@@ -15,6 +15,9 @@
 					<Add option="-std=c++11" />
 					<Add option="-g" />
 				</Compiler>
+				<ExtraCommands>
+					<Add before="./scripts/version.sh" />
+				</ExtraCommands>
 			</Target>
 			<Target title="Release">
 				<Option output="bin/Release/OYAJSon" prefix_auto="1" extension_auto="1" />
@@ -28,15 +31,19 @@
 				<Linker>
 					<Add option="-s" />
 				</Linker>
+				<ExtraCommands>
+					<Add before="./scripts/version.sh" />
+				</ExtraCommands>
 			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-std=c++11" />
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="OYAJSon/OYAJSon.cpp" />
+		<Unit filename="OYAJSon/OYAJSon.h" />
+		<Unit filename="OYAJSon/OYAJSon_version.cpp" />
 		<Unit filename="main.cpp" />
-		<Unit filename="src/OYAJSon.cpp" />
-		<Unit filename="src/OYAJSon.h" />
 		<Extensions>
 			<code_completion />
 			<envvars />

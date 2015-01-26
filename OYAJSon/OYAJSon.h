@@ -25,8 +25,10 @@
 * THE SOFTWARE.
 */
 
-/*! @file JSon.h
-    @brief Main header file for the JSon library.
+/*! @file OYAJSon.h
+    @brief Main header file for the core OYAJSon library.
+
+    OYAJSon: Obsidian's Yet Another JSon
 */
 
 
@@ -38,16 +40,16 @@
 #include <map>
 #include <vector>
 
+#include <initializer_list>
+
+extern const char* OYAJSON_VERSION;
+
 /*! @namespace OYAJSon
     @brief Namespace for Obsidian's Yet Another JSon system.
 */
 namespace OYAJSon {
 
     class JSonValue;
-
-    const unsigned int OYAJSON_VERSION_MAJOR = 0;
-    const unsigned int OYAJSON_VERSION_MINOR = 3;
-    const unsigned int OYAJSON_VERSION_REV = 0;
 
     /*! @typedef size_type
         @brief As defined by std::size_t
@@ -85,32 +87,6 @@ namespace OYAJSon {
     static const char_type OBJECT_SYM_TAIL = '}'; ///< Char type value of the symbol used to end a JSon Object.
     static const char_type ARRAY_SYM_HEAD = '['; ///< Char type value of the symbol used to start a JSon Array.
     static const char_type ARRAY_SYM_TAIL = ']'; ///< Char type value of the symbol used to end a JSon Array.
-
-
-    /*! @brief Parse a JSon formatted string into a JSonValue structure.
-     * NOTE: To be valid, string MUST start with an Array "[]" or Object "{}" as the one and only top-level object.
-     * @param [in] src A string_type JSon formatted string.
-     * @return A JSonValue object.
-     * @throw JSonException Contains a description of what went wrong.
-     */
-    JSonValue Parse(const string_type &src);
-
-    /*! @brief Parse a JSon formatted input stream into a JSonValue structure.
-     * NOTE: To be valid, input stream MUST start with an Array "[]" or Object "{}" as the one and only top-level object.
-     * @param [in] src An std::istream containing a JSon formatted string value.
-     * @return A JSonValue object.
-     * @throw JSonException Contains a description of what went wrong.
-     */
-    JSonValue Parse(std::istream &src);
-
-    /*! @brief Parse a JSon formatted char string into a JSonValue structure.
-     * NOTE: To be valid, string MUST start with an Array "[]" or Object "{}" as the one and only top-level object.
-     * @param [in] src A const_char_ptr containing a JSon formatted string of characters.
-     * @param [in] length The number of characters to be consumed.
-     * @return A JSonValue object.
-     * @throw JSonException Contains a description of what went wrong.
-     */
-    JSonValue Parse(const_char_ptr src, size_type length);
 
 
     /*! @brief Returns a human-readable string_type value representing the given JSonType value.
@@ -238,17 +214,15 @@ namespace OYAJSon {
         /*! @brief Sets a JSonValue to a JSonType_Array with an underlying data set to the given value. */
         JSonValue(const Array &value);
 
-        JSonValue(const string_type& value);
-        JSonValue(const_char_ptr value);
+        JSonValue(const string_type& value, bool parse_as_json_str=false);
         JSonValue(double value);
         JSonValue(int value);
         JSonValue(unsigned int value);
         JSonValue(long value);
         JSonValue(unsigned long value);
         JSonValue(long long value);
-        JSonValue(unsigned long long value);
         JSonValue(float value);
-        explicit JSonValue(bool value);
+        JSonValue(bool value);
         ~JSonValue();
 
         /*! @brief Returns true if the given JSonType is the same as this instance.
@@ -257,6 +231,31 @@ namespace OYAJSon {
             @return Returns true if this instance is the same type as the JSonType given, and false otherwise.
         */
         bool is(JSonType t) const;
+
+        /*! @brief Returns true if all of the given maps' key/values match the internal Object keys and JsonTypes. False returned otherwise.
+
+            Only works on JSonType_Object JSonValue instances.
+
+            Give map does not need to contain all of the keys available within the JSonValue instance, but cannot contain keys that do not exist
+            within the JSonValue instance.
+
+            @param [std::map<string_type, JSonType>&] tmap A map containing the keys and JSonType values to test.
+            @return Returns true if all given keys and JSonTypes match those within this instance.
+            @throws JSonException Thrown if this instance is not a JSonType_Object.
+        */
+        bool is(const std::map<string_type, JSonType> &tmap) const;
+
+        /*! @brief Returns true if all of the given vector JSonTypes match this instance's JSonTypes. False returned otherwise.
+
+            Only works on JSonType_Array JSonValue instances.
+
+            Given vector must match in size and in order of entries being checked.
+
+            @param [std::vector<JSonType>&] tvec A vector containing the JSonType values to test.
+            @return Returns true if all given JSonTypes match those within this instance.
+            @throws JSonException Thrown if this instance is not a JSonType_Array.
+        */
+        bool is(const std::vector<JSonType> &tvec) const;
 
         /*! @brief Returns the current JSonType value of this instance.
             @return JSonType
@@ -289,6 +288,9 @@ namespace OYAJSon {
         */
         void set(const JSonValue& value);
 
+        void set(const std::initializer_list<std::pair<string_type, JSonValue> > &ol);
+        void set(const std::initializer_list<JSonValue> &al);
+
         /*! @brief Template<> method for obtaining the underlying values of this JSonValue instance.
 
             These methods will work ONLY with the following JSonTypes...
@@ -304,7 +306,7 @@ namespace OYAJSon {
 
             NOTE: This method can only be used with JSonType_Object JSonValues, otherwise a JSonException is thrown.
 
-            @return Object A reference to the underlying Object data.
+            @return A reference to the underlying Object data.
             @throws JSonException Exception thrown if this is not a JSonType_Object type.
         */
         Object& get_object();
@@ -313,7 +315,7 @@ namespace OYAJSon {
 
             NOTE: This method can only be used with JSonType_Array JSonValues, otherwise a JSonException is thrown.
 
-            @return Array A reference to the underlying Array data.
+            @return A reference to the underlying Array data.
             @throws JSonException Exception thrown if this is not a JSonType_Array type.
         */
         Array& get_array();
@@ -327,7 +329,8 @@ namespace OYAJSon {
         JSonValue& at(const string_type &key);
         JSonValue& at(size_type index);
 
-        bool has_key(const string_type &key);
+        bool has_key(const string_type &key) const;
+        bool has_keys(const std::vector<string_type> &keys) const;
 
         template <typename TI> TI begin();
         template <typename TI> TI end();
@@ -349,11 +352,10 @@ namespace OYAJSon {
         * @return A reference to this JSonValue object.
         * @throw JSonException if the given string is not a valid JSon string.
         */
-        JSonValue& from_str(const string_type &jsonstr);
+        JSonValue& parse(const string_type &jsonstr);
 
         string_type to_str();
-        string_type serialize(bool pretty=false);
-        string_type serialize(size_type depth);
+        string_type serialize();
         string_type serialize(const string_type& indentStr, size_type depth=0);
 
         JSonValue copy();
@@ -369,7 +371,6 @@ namespace OYAJSon {
         JSonValue& operator=(long rhs);
         JSonValue& operator=(unsigned long rhs);
         JSonValue& operator=(long long rhs);
-        JSonValue& operator=(unsigned long long rhs);
         JSonValue& operator=(float rhs);
         JSonValue& operator=(bool rhs);
 
@@ -386,11 +387,13 @@ namespace OYAJSon {
             string_type* _string;
             bool _bool;
             double _number;
+            long long _numberi;
         };
 
         std::shared_ptr<_data> mData;
         //_data* mData;
         JSonType mDataType;
+        bool mNumberInt;
 
         void _ClearData();
         string_type Serialize_str(const string_type& s);
@@ -439,50 +442,74 @@ namespace OYAJSon {
     }
 
     template<> inline double JSonValue::get<double>() const{
-        if (mDataType == JSonType_Number)
+        if (mDataType == JSonType_Number){
+            if (mNumberInt)
+                return static_cast<double>(mData->_numberi);
             return mData->_number;
+        }
         throw JSonException::InvalidType(JSonType_Number, mDataType);
     }
 
     template<> inline int JSonValue::get<int>() const{
-        if (mDataType == JSonType_Number)
+        if (mDataType == JSonType_Number){
+            if (mNumberInt)
+                return static_cast<int>(mData->_numberi);
             return static_cast<int>(mData->_number);
+        }
         throw JSonException::InvalidType(JSonType_Number, mDataType);
     }
 
     template<> inline unsigned int JSonValue::get<unsigned int>() const{
-        if (mDataType == JSonType_Number)
+        if (mDataType == JSonType_Number){
+            if (mNumberInt)
+                return static_cast<unsigned int>(mData->_numberi);
             return static_cast<unsigned int>(mData->_number);
+        }
         throw JSonException::InvalidType(JSonType_Number, mDataType);
     }
 
     template<> inline long JSonValue::get<long>() const{
-        if (mDataType == JSonType_Number)
+        if (mDataType == JSonType_Number){
+            if (mNumberInt)
+                return static_cast<long>(mData->_numberi);
             return static_cast<long>(mData->_number);
+        }
         throw JSonException::InvalidType(JSonType_Number, mDataType);
     }
 
     template<> inline unsigned long JSonValue::get<unsigned long>() const{
-        if (mDataType == JSonType_Number)
+        if (mDataType == JSonType_Number){
+            if (mNumberInt)
+                return static_cast<unsigned long>(mData->_numberi);
             return static_cast<unsigned long>(mData->_number);
+        }
         throw JSonException::InvalidType(JSonType_Number, mDataType);
     }
 
     template<> inline long long JSonValue::get<long long>() const{
-        if (mDataType == JSonType_Number)
+        if (mDataType == JSonType_Number){
+            if (mNumberInt)
+                return mData->_numberi;
             return static_cast<long long>(mData->_number);
+        }
         throw JSonException::InvalidType(JSonType_Number, mDataType);
     }
 
     template<> inline unsigned long long JSonValue::get<unsigned long long>() const{
-        if (mDataType == JSonType_Number)
+        if (mDataType == JSonType_Number){
+            if (mNumberInt)
+                return static_cast<unsigned long long>(mData->_numberi);
             return static_cast<unsigned long long>(mData->_number);
+        }
         throw JSonException::InvalidType(JSonType_Number, mDataType);
     }
 
     template<> inline float JSonValue::get<float>() const{
-        if (mDataType == JSonType_Number)
+        if (mDataType == JSonType_Number){
+            if (mNumberInt)
+                return static_cast<float>(mData->_numberi);
             return static_cast<float>(mData->_number);
+        }
         throw JSonException::InvalidType(JSonType_Number, mDataType);
     }
 

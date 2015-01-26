@@ -38,23 +38,31 @@ namespace OYAJSon {
     // ------------------------ Now back to the show.
 
 
-    JSonValue::JSonValue() : mDataType(JSonType_Null){_ClearData();}
-    JSonValue::JSonValue(std::nullptr_t) : mDataType(JSonType_Null){_ClearData();}
-    JSonValue::JSonValue(const JSonValue &value) : mDataType(JSonType_Null){operator=(value);}
-    JSonValue::JSonValue(const Object &value) : mDataType(JSonType_Null){operator=(value);}
-    JSonValue::JSonValue(const Array &value) : mDataType(JSonType_Null){operator=(value);}
-    JSonValue::JSonValue(const string_type& value) : mDataType(JSonType_Null){operator=(value);}
-    JSonValue::JSonValue(const_char_ptr value) : mDataType(JSonType_Null){operator=(value);}
-    JSonValue::JSonValue(double value) : mDataType(JSonType_Null){operator=(value);}
-    JSonValue::JSonValue(int value) : mDataType(JSonType_Null){operator=(value);}
-    JSonValue::JSonValue(unsigned int value) : mDataType(JSonType_Null){operator=(value);}
-    JSonValue::JSonValue(long value) : mDataType(JSonType_Null){operator=(value);}
-    JSonValue::JSonValue(unsigned long value) : mDataType(JSonType_Null){operator=(value);}
-    JSonValue::JSonValue(long long value) : mDataType(JSonType_Null){operator=(value);}
-    JSonValue::JSonValue(unsigned long long value) : mDataType(JSonType_Null){operator=(value);}
-    JSonValue::JSonValue(float value) : mDataType(JSonType_Null){operator=(value);}
-    JSonValue::JSonValue(bool value) : mDataType(JSonType_Null){operator=(value);}
-    JSonValue::JSonValue(JSonType type) : mDataType(JSonType_Null){
+    JSonValue::JSonValue() : mDataType(JSonType_Null), mNumberInt(false){_ClearData();}
+    JSonValue::JSonValue(std::nullptr_t) : mDataType(JSonType_Null), mNumberInt(false){_ClearData();}
+    JSonValue::JSonValue(const JSonValue &value) : mDataType(JSonType_Null), mNumberInt(false){operator=(value);}
+    JSonValue::JSonValue(const Object &value) : mDataType(JSonType_Null), mNumberInt(false){operator=(value);}
+    JSonValue::JSonValue(const Array &value) : mDataType(JSonType_Null), mNumberInt(false){operator=(value);}
+    JSonValue::JSonValue(const string_type& value, bool parse_as_json_str) : mDataType(JSonType_Null), mNumberInt(false){
+        if (parse_as_json_str){
+            try{
+                parse(value);
+            } catch (JSonException e){
+                throw e;
+            }
+        } else {
+            operator=(value);
+        }
+    }
+    JSonValue::JSonValue(double value) : mDataType(JSonType_Null), mNumberInt(false){operator=(value);}
+    JSonValue::JSonValue(int value) : mDataType(JSonType_Null), mNumberInt(false){operator=(value);}
+    JSonValue::JSonValue(unsigned int value) : mDataType(JSonType_Null), mNumberInt(false){operator=(value);}
+    JSonValue::JSonValue(long value) : mDataType(JSonType_Null), mNumberInt(false){operator=(value);}
+    JSonValue::JSonValue(unsigned long value) : mDataType(JSonType_Null), mNumberInt(false){operator=(value);}
+    JSonValue::JSonValue(long long value) : mDataType(JSonType_Null), mNumberInt(false){operator=(value);}
+    JSonValue::JSonValue(float value) : mDataType(JSonType_Null), mNumberInt(false){operator=(value);}
+    JSonValue::JSonValue(bool value) : mDataType(JSonType_Null), mNumberInt(false){operator=(value);}
+    JSonValue::JSonValue(JSonType type) : mDataType(JSonType_Null), mNumberInt(false){
         switch(type){
         case JSonType_Object:
             operator=(Object()); break;
@@ -63,7 +71,7 @@ namespace OYAJSon {
         case JSonType_String:
             operator=(""); break;
         case JSonType_Number:
-            operator=(0.0); break;
+            operator=(0); break;
         case JSonType_Bool:
             operator=(false); break;
         default: break;
@@ -74,6 +82,30 @@ namespace OYAJSon {
     }
 
     bool JSonValue::is(JSonType t) const{return mDataType == t;}
+    bool JSonValue::is(const std::map<string_type, JSonType> &tmap) const{
+        if (mDataType != JSonType_Object)
+            throw JSonException::InvalidType(JSonType_Object, mDataType);
+        for (std::map<string_type, JSonType>::const_iterator i = tmap.begin(); i != tmap.end(); i++){
+            if (!has_key(i->first))
+                return false;
+            if (!mData->_object->at(i->first).is(i->second))
+                return false;
+        }
+        return true;
+    }
+
+    bool JSonValue::is(const std::vector<JSonType> &tvec) const{
+        if (mDataType != JSonType_Array)
+            throw JSonException::InvalidType(JSonType_Array, mDataType);
+        if (tvec.size() != mData->_array->size())
+            return false;
+        for (size_type i = 0; i != tvec.size(); i++){
+            if (!mData->_array->at(i).is(tvec[i]))
+                return false;
+        }
+        return true;
+    }
+
     JSonType JSonValue::type() const{return mDataType;}
     string_type JSonValue::type_str() const{
         return JSonTypeToString(mDataType);
@@ -89,12 +121,29 @@ namespace OYAJSon {
             mDataType = value.mDataType;
             break;
         case JSonType_Number:
-            operator=(value.mData->_number); break;
+            if (value.mNumberInt){
+                operator=(value.mData->_numberi);
+            } else {
+                operator=(value.mData->_number);
+            }
+            break;
         case JSonType_Bool:
             operator=(value.mData->_bool); break;
         default:
             _ClearData(); // It's now a null type
         }
+    }
+
+    void JSonValue::set(const std::initializer_list<std::pair<string_type, JSonValue> > &ol){
+        _ClearData();
+        mDataType = JSonType_Object;
+        mData->_object = new Object(ol.begin(), ol.end());
+    }
+
+    void JSonValue::set(const std::initializer_list<JSonValue> &al){
+        _ClearData();
+        mDataType = JSonType_Array;
+        mData->_array = new Array(al.begin(), al.end());
     }
 
     Object& JSonValue::get_object(){
@@ -158,10 +207,20 @@ namespace OYAJSon {
         throw JSonException::InvalidType(JSonType_Array, mDataType);
     }
 
-    bool JSonValue::has_key(const string_type &key){
+    bool JSonValue::has_key(const string_type &key) const{
         if (mDataType != JSonType_Object)
             throw JSonException::InvalidType(JSonType_Object, mDataType);
         return mData->_object->find(key) != mData->_object->end();
+    }
+
+    bool JSonValue::has_keys(const std::vector<string_type> &keys) const{
+        if (mDataType != JSonType_Object)
+            throw JSonException::InvalidType(JSonType_Object, mDataType);
+        for (std::vector<string_type>::const_iterator i = keys.begin(); i != keys.end(); i++){
+            if (mData->_object->find(*i) == mData->_object->end())
+                return false;
+        }
+        return true;
     }
 
     size_type JSonValue::size(){
@@ -180,7 +239,7 @@ namespace OYAJSon {
         return 0;
     }
 
-    JSonValue& JSonValue::from_str(const string_type &jsonstr){
+    JSonValue& JSonValue::parse(const string_type &jsonstr){
         string_type jsrc = _StripCharacters(_trim(jsonstr), "\r\n\t\f\v");
         JSonType jtype = JSonType_Null;
         try{
@@ -221,12 +280,8 @@ namespace OYAJSon {
         return std::string();
     }
 
-    string_type JSonValue::serialize(bool pretty){
-        return (pretty) ? serialize(" ", 0) : serialize(std::string());
-    }
-
-    string_type JSonValue::serialize(size_type depth){
-        return serialize(" ", depth); // This will return a pretty serialization of this JSon with each indent being a single space (" ") character.
+    string_type JSonValue::serialize(){
+        return serialize("");
     }
 
     string_type JSonValue::serialize(const string_type& indentStr, size_type depth){
@@ -251,7 +306,11 @@ namespace OYAJSon {
         case JSonType_Number:
             {
                 char buf[256];
-                snprintf(buf, sizeof(buf), "%g", mData->_number);
+                if (mNumberInt){
+                    snprintf(buf, sizeof(buf), "%lld", mData->_numberi);
+                } else {
+                    snprintf(buf, sizeof(buf), "%g", mData->_number);
+                }
                 serial += buf;
             }
             break;
@@ -299,7 +358,12 @@ namespace OYAJSon {
             (*v.mData->_string) = (*mData->_string);
             break;
         case JSonType_Number:
-            v.mData->_number = mData->_number;
+            if (mNumberInt){
+                v.mNumberInt = true;
+                v.mData->_numberi = mData->_numberi;
+            } else {
+                v.mData->_number = mData->_number;
+            }
             break;
         case JSonType_Bool:
             v.mData->_bool = mData->_bool;
@@ -345,35 +409,36 @@ namespace OYAJSon {
         _ClearData();
         mData->_number = rhs;
         mDataType = JSonType_Number;
+        mNumberInt = false;
         return *this;
     }
 
     JSonValue& JSonValue::operator=(int rhs){
-        return operator=(double(rhs));
+        return operator=(static_cast<long long>(rhs));
     }
 
     JSonValue& JSonValue::operator=(unsigned int rhs){
-        return operator=(double(rhs));
+        return operator=(static_cast<long long>(rhs));
     }
 
     JSonValue& JSonValue::operator=(long rhs){
-        return operator=(double(rhs));
+        return operator=(static_cast<long long>(rhs));
     }
 
     JSonValue& JSonValue::operator=(unsigned long rhs){
-        return operator=(double(rhs));
+        return operator=(static_cast<long long>(rhs));
     }
 
     JSonValue& JSonValue::operator=(long long rhs){
-        return operator=(double(rhs));
-    }
-
-    JSonValue& JSonValue::operator=(unsigned long long rhs){
-        return operator=(double(rhs));
+        _ClearData();
+        mData->_numberi = rhs;
+        mDataType = JSonType_Number;
+        mNumberInt = true;
+        return *this;
     }
 
     JSonValue& JSonValue::operator=(float rhs){
-        return operator=(double(rhs));
+        return operator=(static_cast<double>(rhs));
     }
 
     JSonValue& JSonValue::operator=(bool rhs){
@@ -793,7 +858,11 @@ namespace OYAJSon {
                 obj.get_object().insert({key, JSonValue(_deserializeChars(value))});
                 break;
             case JSonType_Number:
-                obj.get_object().insert({key, JSonValue(std::stod(value))});
+                if (value.find("e") == string_type::npos && value.find("E") == string_type::npos && value.find(".") == string_type::npos){
+                    obj.get_object().insert({key, JSonValue(std::stoll(value))});;
+                } else {
+                    obj.get_object().insert({key, JSonValue(std::stod(value))});
+                }
                 break;
             case JSonType_Bool:
                 obj.get_object().insert({key, JSonValue(_icaseeq(value, "true"))});
@@ -887,26 +956,6 @@ namespace OYAJSon {
 /* --------------------------------------------------------------------------------------------
  *  json::<Functions>
  -------------------------------------------------------------------------------------------- */
-
-    JSonValue Parse(const string_type &src){
-        JSonValue v;
-        try{
-            v.from_str(src);
-        } catch(JSonException e) {
-            throw e;
-        }
-        return v;
-    }
-
-    JSonValue Parse(std::istream &src){
-        string_type strsrc;
-        src >> strsrc;
-        return Parse(strsrc);
-    }
-
-    JSonValue Parse(const_char_ptr src, size_type length){
-        return Parse(string_type(src, length));
-    }
 
     string_type JSonTypeToString(JSonType type){
         switch(type){
