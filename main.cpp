@@ -80,7 +80,8 @@ void Test02_ParseInstance(){
             "\"Some String\","
             "null"
         "]}";
-    OYAJSon::JSonValue v(std::string(test), true);
+    OYAJSon::JSonValue v;
+    v.parse(std::string(test));
 
     std::cout << "\tTesting size ... ";
     assert(v.size() == 4);

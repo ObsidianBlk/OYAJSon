@@ -3,4 +3,5 @@
 /bin
 /obj
 /build
+/doxygen
 /OYAJSon/OYAJSon_version.cpp

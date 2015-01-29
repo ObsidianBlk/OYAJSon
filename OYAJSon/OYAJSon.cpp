@@ -30,8 +30,8 @@ namespace OYAJSon {
 
     // ------------------------
     // Couple of private function prototypes
-    JSonValue _ParseArray(const string_type &src);
-    JSonValue _ParseObject(const string_type &src);
+    void _ParseArray(const string_type &src, JSonValue& jval);
+    void _ParseObject(const string_type &src, JSonValue& jval);
     inline string_type _trim(const string_type &s);
     JSonType _DetermineType(const string_type &src);
     string_type _StripCharacters(string_type s, string_type characters);
@@ -43,17 +43,7 @@ namespace OYAJSon {
     JSonValue::JSonValue(const JSonValue &value) : mDataType(JSonType_Null), mNumberInt(false){operator=(value);}
     JSonValue::JSonValue(const Object &value) : mDataType(JSonType_Null), mNumberInt(false){operator=(value);}
     JSonValue::JSonValue(const Array &value) : mDataType(JSonType_Null), mNumberInt(false){operator=(value);}
-    JSonValue::JSonValue(const string_type& value, bool parse_as_json_str) : mDataType(JSonType_Null), mNumberInt(false){
-        if (parse_as_json_str){
-            try{
-                parse(value);
-            } catch (JSonException e){
-                throw e;
-            }
-        } else {
-            operator=(value);
-        }
-    }
+    JSonValue::JSonValue(const string_type& value) : mDataType(JSonType_Null), mNumberInt(false){operator=(value);}
     JSonValue::JSonValue(double value) : mDataType(JSonType_Null), mNumberInt(false){operator=(value);}
     JSonValue::JSonValue(int value) : mDataType(JSonType_Null), mNumberInt(false){operator=(value);}
     JSonValue::JSonValue(unsigned int value) : mDataType(JSonType_Null), mNumberInt(false){operator=(value);}
@@ -223,7 +213,7 @@ namespace OYAJSon {
         return true;
     }
 
-    size_type JSonValue::size(){
+    size_type JSonValue::size() const{
         switch(mDataType){
         case JSonType_Object:
             return mData->_object->size();
@@ -250,10 +240,10 @@ namespace OYAJSon {
 
         switch(jtype){
         case JSonType_Object:
-            set(_ParseObject(jsrc));
+            _ParseObject(jsrc, *this);
             break;
         case JSonType_Array:
-            set(_ParseArray(jsrc));
+            _ParseArray(jsrc, *this);
             break;
         default:
             throw JSonException::ParseInvalidJsonContainer();
@@ -262,29 +252,23 @@ namespace OYAJSon {
         return *this;
     }
 
-    string_type JSonValue::to_str(){
+    string_type JSonValue::to_str() const{
         switch(mDataType){
+        case JSonType_Object:
+        case JSonType_Array:
+        case JSonType_Number:
+            return serialize("");
         case JSonType_Null:
             return "null";
-        case JSonType_Object:
-            return "Object";
-        case JSonType_Array:
-            return "Array";
         case JSonType_String:
             return *(mData->_string);
-        case JSonType_Number:
-            return serialize(); // Serialize returns the number as a string already.
         case JSonType_Bool:
             return mData->_bool ? "true" : "false";
         }
         return std::string();
     }
 
-    string_type JSonValue::serialize(){
-        return serialize("");
-    }
-
-    string_type JSonValue::serialize(const string_type& indentStr, size_type depth){
+    string_type JSonValue::serialize(const string_type& indentStr, size_type depth) const{
         string_type serial = "";
         string_type eol = ""; // eol = End of Line (symbol, only used when serializing Arrays and Objects)
         bool past_first_element = false;
@@ -340,7 +324,7 @@ namespace OYAJSon {
     }
 
 
-    JSonValue JSonValue::copy(){
+    JSonValue JSonValue::copy() const{
         JSonValue v(mDataType);
 
         switch(mDataType){
@@ -507,7 +491,7 @@ namespace OYAJSon {
         mDataType = JSonType_Null;
     }
 
-    string_type JSonValue::Serialize_str(const string_type& s){
+    string_type JSonValue::Serialize_str(const string_type& s) const{
         string_type serial = "";
         for (string_type::const_iterator i = s.begin(); i != s.end(); i++){
             switch (*i){
@@ -801,12 +785,11 @@ namespace OYAJSon {
         throw JSonException::ParseUnknownValueType(src);
     }
 
-    JSonValue _ParseObject(const string_type &src){
+    void _ParseObject(const string_type &src, JSonValue& jval){
         // At this point, we only ASSUME we have an Object. Let's confirm...
         size_type tailpos = _FindNextSymbol(src, OBJECT_SYM_TAIL);
         if (tailpos == string_type::npos){ // If we didn't find the Object tail symbol, then this is JUNK!
             throw JSonException::ParseUnclosedStructure(JSonType_Object);
-            throw std::runtime_error("JSon object not closed!");
         }
 
         // Check that we only have white space after the Object tail symbol.
@@ -816,7 +799,7 @@ namespace OYAJSon {
         // If we're here, then we know that, structurally, anyway, this looks like a valid Object. Let's parse!
 
 
-        JSonValue obj(JSonType_Object);
+        jval = JSonValue(JSonType_Object);
         size_type spos = 1;
         size_type epos = 0;
         while (spos < tailpos){
@@ -849,37 +832,43 @@ namespace OYAJSon {
             JSonType vtype = _DetermineType(value);
             switch(vtype){
             case JSonType_Object:
-                obj.get_object().insert({key, _ParseObject(value)});
+                {
+                    JSonValue v;
+                    _ParseObject(value, v);
+                    jval.get_object().insert({key, v});
+                }
                 break;
             case JSonType_Array:
-                obj.get_object().insert({key, _ParseArray(value)});
+                {
+                    JSonValue v;
+                    _ParseArray(value, v);
+                    jval.get_object().insert({key, v});
+                }
                 break;
             case JSonType_String:
-                obj.get_object().insert({key, JSonValue(_deserializeChars(value))});
+                jval.get_object().insert({key, JSonValue(_deserializeChars(value))});
                 break;
             case JSonType_Number:
                 if (value.find("e") == string_type::npos && value.find("E") == string_type::npos && value.find(".") == string_type::npos){
-                    obj.get_object().insert({key, JSonValue(std::stoll(value))});;
+                    jval.get_object().insert({key, JSonValue(std::stoll(value))});;
                 } else {
-                    obj.get_object().insert({key, JSonValue(std::stod(value))});
+                    jval.get_object().insert({key, JSonValue(std::stod(value))});
                 }
                 break;
             case JSonType_Bool:
-                obj.get_object().insert({key, JSonValue(_icaseeq(value, "true"))});
+                jval.get_object().insert({key, JSonValue(_icaseeq(value, "true"))});
                 break;
             case JSonType_Null:
-                obj.get_object().insert({key, JSonValue()});
+                jval.get_object().insert({key, JSonValue()});
                 break;
             }
             spos = epos+1;
             if (epos != tailpos && _trim(src.substr(spos, tailpos-spos)).size() <= 0)
                 throw JSonException::ParseMissingValue();
         }
-
-        return obj;
     }
 
-    JSonValue _ParseArray(const string_type &src){
+    void _ParseArray(const string_type &src, JSonValue& jval){
         // At this point, we only ASSUME we have an Array. Let's confirm...
         size_type tailpos = _FindNextSymbol(src, ARRAY_SYM_TAIL);
         if (tailpos == string_type::npos){ // If we didn't find the Array tail symbol, then this is JUNK!
@@ -893,7 +882,7 @@ namespace OYAJSon {
         // If we're here, then we know that, structurally, anyway, this looks like a valid Array. Let's parse!
 
 
-        JSonValue arr(JSonType_Array);
+        jval = JSonValue(JSonType_Array);
         size_type spos = 1;
         size_type epos = 0;
         while (spos < tailpos){
@@ -916,30 +905,36 @@ namespace OYAJSon {
             JSonType vtype = _DetermineType(value);
             switch(vtype){
             case JSonType_Object:
-                arr.get_array().push_back(_ParseObject(value));
+                {
+                    JSonValue v;
+                    _ParseObject(value, v);
+                    jval.get_array().push_back(v);
+                }
                 break;
             case JSonType_Array:
-                arr.get_array().push_back(_ParseArray(value));
+                {
+                    JSonValue v;
+                    _ParseArray(value, v);
+                    jval.get_array().push_back(v);
+                }
                 break;
             case JSonType_String:
-                arr.get_array().push_back(JSonValue(_deserializeChars(value)));
+                jval.get_array().push_back(JSonValue(_deserializeChars(value)));
                 break;
             case JSonType_Number:
-                arr.get_array().push_back(JSonValue(std::stod(value)));
+                jval.get_array().push_back(JSonValue(std::stod(value)));
                 break;
             case JSonType_Bool:
-                arr.get_array().push_back(JSonValue(_icaseeq(value, "true")));
+                jval.get_array().push_back(JSonValue(_icaseeq(value, "true")));
                 break;
             case JSonType_Null:
-                arr.get_array().push_back(JSonValue());
+                jval.get_array().push_back(JSonValue());
                 break;
             }
             spos = epos+1;
             if (epos != tailpos && _trim(src.substr(spos, tailpos-spos)).size() <= 0)
                 throw JSonException::ParseMissingValue();
         }
-
-        return arr;
     }
 
 
