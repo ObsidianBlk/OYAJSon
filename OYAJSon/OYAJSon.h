@@ -637,7 +637,8 @@ namespace OYAJSon {
             \endcode
         */
         JSonValue& operator=(const string_type &rhs);
-        JSonValue& operator=(const_char_ptr rhs);
+
+        JSonValue& operator=(std::nullptr_t rhs);
 
         /*! Sets this JSonValue a JSonType_Number and stores the given value.
             @param rhs
@@ -779,22 +780,105 @@ namespace OYAJSon {
     // ------------------------------------------------------------------------------------------------------
     // ------------------------------------------------------------------------------------------------------
 
+    /*! OYAJSon's JSon exception class.
+
+        Can be thrown directly, or can be thrown by calling any one of the static methods for consistent error message formatting.
+
+        \code{.cpp}
+            // Example - Assuming jArr is of type JSonType_Array
+            try{
+                if (!jArr.is(JSonType_Object))
+                    throw JSonException::InvalidJSonType(JSonType_Object, jArr.type());
+            catch (JSonException e){
+                std::cout << e.what() << std::endl;
+                // Outputs "[1001] Operation expecting JSonValue type Object but JSonValue is of type Array."
+            }
+        \endcode
+    */
     class JSonException : public std::runtime_error{
     public:
+        static const unsigned int ERR_PARSE_MALFORMED;              ///< Error code thrown by Parser when a Malformed error occurs
+        static const unsigned int ERR_PARSE_INVALIDJSONCONTAINER;   ///< Error code thrown by Parser when a Invalid JSon Container error occurs
+        static const unsigned int ERR_PARSE_UNCLOSEDSTURCTURE;      ///< Error code thrown by Parser when a Unclosed Structure error occurs
+        static const unsigned int ERR_PARSE_MISSINGSYMBOL;          ///< Error code thrown by Parser when a Missing Symbol error occurs
+        static const unsigned int ERR_PARSE_INVALIDSYMBOL;          ///< Error code thrown by Parser when a Invalid Symbol error occurs
+        static const unsigned int ERR_PARSE_UNKNOWNVALUETYPE;       ///< Error code thrown by Parser when a Unknown Value Type error occurs
+        static const unsigned int ERR_PARSE_MISSINGVALUE;           ///< Error code thrown by Parser when a Missing Value error occurs
+
+        static const unsigned int ERR_INVALIDJSONTYPE;              ///< Error code thrown when An unexpected JSonType is found.
+        static const unsigned int ERR_MISSINGKEY;                   ///< Error code thrown an expected key is not found in Object.
+        static const unsigned int ERR_INDEXOUTOFBOUNDS;             ///< Error code thrown a given index is beyond the bounds of the Array.
+
+        /*! Default JSonException constructor.
+            @param msg A const string_type& containing the message for this exception.
+            @param code An unsigned int code for this exception.
+        */
         JSonException(const string_type &msg, unsigned int code);
+
         virtual const char* what() const throw();
+
+        /*! Returns the error code given for this error.
+            @return unsigned int code given when exception generated.
+
+            Useful for quickly determining the severity of the exception (severity varies project to project)
+        */
         unsigned int get_code() const;
 
-        static JSonException InvalidType(JSonType expected, JSonType given);
-        static JSonException KeyNotInObject(const string_type &key);
+        /*! Generate a JSonException when given a JSonValue of the incorrect JSonType expected.
+            @param expected The JSonType expected by the operation.
+            @param given The JSonType give to the operation.
+            @return A JSonException with a preformatted message and code for this error.
+        */
+        static JSonException InvalidJSonType(JSonType expected, JSonType given);
+
+        /*! Generate a JSonException when the JSonValue does not have the requested key.
+            @param key A coonst string_type& of the key requested.
+            @return A JSonException with a preformatted message and code for this error.
+        */
+        static JSonException MissingKey(const string_type &key);
+
+        /*! Generate a JSonException when given index is out of bounds of the JSonValue Array.
+            @param index A size_type index value
+            @return A JSonException with a preformatted message and code for this error.
+        */
         static JSonException IndexOutOfBounds(size_type index);
 
+        /*! Generate a JSonException when Parser encounters an unspecified malformed JSon string that cannot be parsed.
+            @return A JSonException with a preformatted message and code for this error.
+        */
         static JSonException ParseMalformed();
+
+        /*! Generate a JSonException when Parser given a JSon string that does not begin with a valid JSon container.
+            @return A JSonException with a preformatted message and code for this error.
+        */
         static JSonException ParseInvalidJsonContainer();
+
+        /*! Generate a JSonException when Parser encounters a structure ('[]', '{}', or '""') that is not closed.
+            @param type The type of structure missing a valid closure.
+            @return A JSonException with a preformatted message and code for this error.
+        */
         static JSonException ParseUnclosedStructure(JSonType type);
-        static JSonException ParseSymbolMissing(char_type symbol);
-        static JSonException ParseInvalidSymbols();
+
+        /*! Generate a JSonException when Parser is unable to find an expected symbol (usually ',' or ':')
+            @param symbol A char_type containing the expected, but missing, symbol.
+            @return A JSonException with a preformatted message and code for this error.
+        */
+        static JSonException ParseMissingSymbol(char_type symbol);
+
+        /*! Generate a JSonException when Parser encounters an unexpected symbol.
+            @return A JSonException with a preformatted message and code for this error.
+        */
+        static JSonException ParseInvalidSymbol();
+
+        /*! Generate a JSonException when Parser is unable to determine a values type.
+            @param value A const string_type& containing the value the Parser was attempting to identify.
+            @return A JSonException with a preformatted message and code for this error.
+        */
         static JSonException ParseUnknownValueType(const string_type &value);
+
+        /*! Generate a JSonException when Parser was expecting a value but did not find one.
+            @return A JSonException with a preformatted message and code for this error.
+        */
         static JSonException ParseMissingValue();
     private:
         unsigned int m_code;
@@ -811,7 +895,7 @@ namespace OYAJSon {
     template<> inline string_type JSonValue::get<string_type>() const{
         if (mDataType == JSonType_String)
             return string_type(mData->_string->begin(), mData->_string->end());
-        throw JSonException::InvalidType(JSonType_String, mDataType);
+        throw JSonException::InvalidJSonType(JSonType_String, mDataType);
     }
 
     template<> inline double JSonValue::get<double>() const{
@@ -820,7 +904,7 @@ namespace OYAJSon {
                 return static_cast<double>(mData->_numberi);
             return mData->_number;
         }
-        throw JSonException::InvalidType(JSonType_Number, mDataType);
+        throw JSonException::InvalidJSonType(JSonType_Number, mDataType);
     }
 
     template<> inline int JSonValue::get<int>() const{
@@ -829,7 +913,7 @@ namespace OYAJSon {
                 return static_cast<int>(mData->_numberi);
             return static_cast<int>(mData->_number);
         }
-        throw JSonException::InvalidType(JSonType_Number, mDataType);
+        throw JSonException::InvalidJSonType(JSonType_Number, mDataType);
     }
 
     template<> inline unsigned int JSonValue::get<unsigned int>() const{
@@ -838,7 +922,7 @@ namespace OYAJSon {
                 return static_cast<unsigned int>(mData->_numberi);
             return static_cast<unsigned int>(mData->_number);
         }
-        throw JSonException::InvalidType(JSonType_Number, mDataType);
+        throw JSonException::InvalidJSonType(JSonType_Number, mDataType);
     }
 
     template<> inline long JSonValue::get<long>() const{
@@ -847,7 +931,7 @@ namespace OYAJSon {
                 return static_cast<long>(mData->_numberi);
             return static_cast<long>(mData->_number);
         }
-        throw JSonException::InvalidType(JSonType_Number, mDataType);
+        throw JSonException::InvalidJSonType(JSonType_Number, mDataType);
     }
 
     template<> inline unsigned long JSonValue::get<unsigned long>() const{
@@ -856,7 +940,7 @@ namespace OYAJSon {
                 return static_cast<unsigned long>(mData->_numberi);
             return static_cast<unsigned long>(mData->_number);
         }
-        throw JSonException::InvalidType(JSonType_Number, mDataType);
+        throw JSonException::InvalidJSonType(JSonType_Number, mDataType);
     }
 
     template<> inline long long JSonValue::get<long long>() const{
@@ -865,7 +949,7 @@ namespace OYAJSon {
                 return mData->_numberi;
             return static_cast<long long>(mData->_number);
         }
-        throw JSonException::InvalidType(JSonType_Number, mDataType);
+        throw JSonException::InvalidJSonType(JSonType_Number, mDataType);
     }
 
     template<> inline unsigned long long JSonValue::get<unsigned long long>() const{
@@ -874,7 +958,7 @@ namespace OYAJSon {
                 return static_cast<unsigned long long>(mData->_numberi);
             return static_cast<unsigned long long>(mData->_number);
         }
-        throw JSonException::InvalidType(JSonType_Number, mDataType);
+        throw JSonException::InvalidJSonType(JSonType_Number, mDataType);
     }
 
     template<> inline float JSonValue::get<float>() const{
@@ -883,37 +967,37 @@ namespace OYAJSon {
                 return static_cast<float>(mData->_numberi);
             return static_cast<float>(mData->_number);
         }
-        throw JSonException::InvalidType(JSonType_Number, mDataType);
+        throw JSonException::InvalidJSonType(JSonType_Number, mDataType);
     }
 
     template<> inline bool JSonValue::get<bool>() const{
         if (mDataType == JSonType_Bool)
             return mData->_bool;
-        throw JSonException::InvalidType(JSonType_Bool, mDataType);
+        throw JSonException::InvalidJSonType(JSonType_Bool, mDataType);
     }
 
     template <> inline Object::iterator JSonValue::begin(){
         if (mDataType == JSonType_Object)
             return mData->_object->begin();
-        throw JSonException::InvalidType(JSonType_Object, mDataType);
+        throw JSonException::InvalidJSonType(JSonType_Object, mDataType);
     }
 
     template <> inline Array::iterator JSonValue::begin(){
         if (mDataType == JSonType_Array)
             return mData->_array->begin();
-        throw JSonException::InvalidType(JSonType_Object, mDataType);
+        throw JSonException::InvalidJSonType(JSonType_Object, mDataType);
     }
 
     template <> inline Object::iterator JSonValue::end(){
         if (mDataType == JSonType_Object)
             return mData->_object->end();
-        throw JSonException::InvalidType(JSonType_Array, mDataType);
+        throw JSonException::InvalidJSonType(JSonType_Array, mDataType);
     }
 
     template <> inline Array::iterator JSonValue::end(){
         if (mDataType == JSonType_Array)
             return mData->_array->end();
-        throw JSonException::InvalidType(JSonType_Array, mDataType);
+        throw JSonException::InvalidJSonType(JSonType_Array, mDataType);
     }
 
 } // End namespace "OYAJSon"

@@ -122,12 +122,44 @@ void Test02_ParseInstance(){
 }
 
 
+void Test03_ObjectViaSubscription(){
+    std::cout << "TEST 03: Fill JSon Object via subscription." << std::endl;
+
+    std::cout << "\tCreating JSonValue of type JSonType_Object ... " << std::endl;
+    OYAJSon::JSonValue jObj(OYAJSon::JSonType_Object);
+    jObj["Key1"] = 42;
+    jObj["Key2"] = 3.14159;
+    jObj["Key3"] = true;
+    jObj["Key4"] = nullptr;
+    jObj["Key5"] = OYAJSon::JSonValue(OYAJSon::Array{
+        1,
+        "String",
+        false
+    });
+
+    std::cout << "\tTesting size ... ";
+    assert(jObj.size() == 5);
+    std::cout << "Success!" << std::endl;
+
+    std::cout << "\tTesting Key was created ... ";
+    assert(jObj.has_key("Key3"));
+    std::cout << "Success!" << std::endl;
+
+    std::cout << "\tTesting Key is of expected type ... ";
+    assert(jObj["Key5"].is(OYAJSon::JSonType_Array));
+    std::cout << "Success!" << std::endl;
+
+    std::cout << "\tTEST COMPLETE" << std::endl << std::endl;
+}
+
+
 int main()
 {
     std::cout << "Tests for ObsidianBlk's Yet Another JSon library (" << OYAJSON_VERSION << ")" << std::endl;
     std::cout << "-------------------------------------------" << std::endl;
     Test01_CreateInstance();
     Test02_ParseInstance();
+    Test03_ObjectViaSubscription();
 
     std::cout << "------------ All Test Completed ------------" << std::endl << std::endl;
     return 0;

@@ -74,7 +74,7 @@ namespace OYAJSon {
     bool JSonValue::is(JSonType t) const{return mDataType == t;}
     bool JSonValue::is(const std::map<string_type, JSonType> &tmap) const{
         if (mDataType != JSonType_Object)
-            throw JSonException::InvalidType(JSonType_Object, mDataType);
+            throw JSonException::InvalidJSonType(JSonType_Object, mDataType);
         for (std::map<string_type, JSonType>::const_iterator i = tmap.begin(); i != tmap.end(); i++){
             if (!has_key(i->first))
                 return false;
@@ -86,7 +86,7 @@ namespace OYAJSon {
 
     bool JSonValue::is(const std::vector<JSonType> &tvec) const{
         if (mDataType != JSonType_Array)
-            throw JSonException::InvalidType(JSonType_Array, mDataType);
+            throw JSonException::InvalidJSonType(JSonType_Array, mDataType);
         if (tvec.size() != mData->_array->size())
             return false;
         for (size_type i = 0; i != tvec.size(); i++){
@@ -139,18 +139,18 @@ namespace OYAJSon {
     Object& JSonValue::get_object(){
         if (mDataType == JSonType_Object)
             return *(mData->_object);
-        throw JSonException::InvalidType(JSonType_Object, mDataType);
+        throw JSonException::InvalidJSonType(JSonType_Object, mDataType);
     }
 
     Array& JSonValue::get_array(){
         if (mDataType == JSonType_Array)
             return *(mData->_array);
-        throw JSonException::InvalidType(JSonType_Object, mDataType);
+        throw JSonException::InvalidJSonType(JSonType_Object, mDataType);
     }
 
     void JSonValue::insert(const string_type &key, JSonValue &value){
         if (mDataType != JSonType_Object)
-            throw JSonException::InvalidType(JSonType_Object, mDataType);
+            throw JSonException::InvalidJSonType(JSonType_Object, mDataType);
         if (mData->_object->find(key) != mData->_object->end())
             throw std::runtime_error("Key already exists in JSon Object.");
         mData->_object->insert({key, value});
@@ -158,7 +158,7 @@ namespace OYAJSon {
 
     void JSonValue::insert(size_type pos, JSonValue &value){
         if (mDataType != JSonType_Array)
-            throw JSonException::InvalidType(JSonType_Array, mDataType);
+            throw JSonException::InvalidJSonType(JSonType_Array, mDataType);
         if (pos >= mData->_array->size()){
             mData->_array->push_back(value);
         } else {
@@ -168,13 +168,13 @@ namespace OYAJSon {
 
     void JSonValue::insert(Array::iterator i, JSonValue &value){
         if (mDataType != JSonType_Array)
-            throw JSonException::InvalidType(JSonType_Array, mDataType);
+            throw JSonException::InvalidJSonType(JSonType_Array, mDataType);
         mData->_array->insert(i, value);
     }
 
     void JSonValue::push_back(JSonValue &value){
         if (mDataType != JSonType_Array)
-            throw JSonException::InvalidType(JSonType_Array, mDataType);
+            throw JSonException::InvalidJSonType(JSonType_Array, mDataType);
         mData->_array->push_back(value);
     }
 
@@ -183,9 +183,9 @@ namespace OYAJSon {
             Object::iterator i = mData->_object->find(key);
             if (i != mData->_object->end())
                 return i->second;
-            throw JSonException::KeyNotInObject(key);
+            throw JSonException::MissingKey(key);
         }
-        throw JSonException::InvalidType(JSonType_Object, mDataType);
+        throw JSonException::InvalidJSonType(JSonType_Object, mDataType);
     }
 
     JSonValue& JSonValue::at(size_type index){
@@ -194,18 +194,18 @@ namespace OYAJSon {
                 throw JSonException::IndexOutOfBounds(index);
             return mData->_array->at(index);
         }
-        throw JSonException::InvalidType(JSonType_Array, mDataType);
+        throw JSonException::InvalidJSonType(JSonType_Array, mDataType);
     }
 
     bool JSonValue::has_key(const string_type &key) const{
         if (mDataType != JSonType_Object)
-            throw JSonException::InvalidType(JSonType_Object, mDataType);
+            throw JSonException::InvalidJSonType(JSonType_Object, mDataType);
         return mData->_object->find(key) != mData->_object->end();
     }
 
     bool JSonValue::has_keys(const std::vector<string_type> &keys) const{
         if (mDataType != JSonType_Object)
-            throw JSonException::InvalidType(JSonType_Object, mDataType);
+            throw JSonException::InvalidJSonType(JSonType_Object, mDataType);
         for (std::vector<string_type>::const_iterator i = keys.begin(); i != keys.end(); i++){
             if (mData->_object->find(*i) == mData->_object->end())
                 return false;
@@ -385,8 +385,9 @@ namespace OYAJSon {
         return *this;
     }
 
-    JSonValue& JSonValue::operator=(const_char_ptr rhs){
-        return operator=(string_type(rhs));
+    JSonValue& JSonValue::operator=(std::nullptr_t rhs){
+        _ClearData(); // This method sets mDataType to JSonType_Null for me already. No need to do that explicitly.
+        return *this;
     }
 
     JSonValue& JSonValue::operator=(double rhs){
@@ -458,16 +459,19 @@ namespace OYAJSon {
 
     JSonValue& JSonValue::operator[](const string_type &key){
         if (mDataType != JSonType_Object)
-            throw JSonException::InvalidType(JSonType_Object, mDataType);
+            throw JSonException::InvalidJSonType(JSonType_Object, mDataType);
         Object::iterator val = mData->_object->find(key);
-        if (val == mData->_object->end())
-            throw JSonException::KeyNotInObject(key);
+        if (val == mData->_object->end()){
+            mData->_object->insert({key, JSonValue()});
+            val = mData->_object->find(key);
+            //throw JSonException::KeyNotInObject(key);
+        }
         return val->second;
     }
 
     JSonValue& JSonValue::operator[](size_type index){
         if (mDataType != JSonType_Array)
-            throw JSonException::InvalidType(JSonType_Array, mDataType);
+            throw JSonException::InvalidJSonType(JSonType_Array, mDataType);
         if (index >= mData->_array->size())
             throw JSonException::IndexOutOfBounds(index);
         return mData->_array->at(index);
@@ -794,7 +798,7 @@ namespace OYAJSon {
 
         // Check that we only have white space after the Object tail symbol.
         if (_trim(src.substr(tailpos+1)).size() != 0){
-            throw JSonException::ParseInvalidSymbols(); // If not... then this is junk!
+            throw JSonException::ParseInvalidSymbol(); // If not... then this is junk!
         }
         // If we're here, then we know that, structurally, anyway, this looks like a valid Object. Let's parse!
 
@@ -810,7 +814,7 @@ namespace OYAJSon {
                 epos = _FindNextSymbol(src, OBJECT_SYM_TAIL, spos);
                 if (epos == string_type::npos){
                     // Technically, we should have already accounted for this case, but better safe than sorry.
-                    throw JSonException::ParseSymbolMissing(OBJECT_SYM_TAIL);
+                    throw JSonException::ParseMissingSymbol(OBJECT_SYM_TAIL);
                 }
             }
 
@@ -820,7 +824,7 @@ namespace OYAJSon {
             // Finding the pair separator.
             size_type pairpos = _FindNextSymbol(value, OBJECT_PAIR_SEPARATOR);
             if (pairpos == string_type::npos)
-                throw JSonException::ParseSymbolMissing(OBJECT_PAIR_SEPARATOR);
+                throw JSonException::ParseMissingSymbol(OBJECT_PAIR_SEPARATOR);
 
             // Extracting the key name
             string_type key = _deserializeChars(_trim(value.substr(0, pairpos)));
@@ -872,7 +876,7 @@ namespace OYAJSon {
         // At this point, we only ASSUME we have an Array. Let's confirm...
         size_type tailpos = _FindNextSymbol(src, ARRAY_SYM_TAIL);
         if (tailpos == string_type::npos){ // If we didn't find the Array tail symbol, then this is JUNK!
-            throw JSonException::ParseSymbolMissing(ARRAY_SYM_TAIL);
+            throw JSonException::ParseMissingSymbol(ARRAY_SYM_TAIL);
         }
 
         // Check that we only have white space after the Array tail symbol.
@@ -893,7 +897,7 @@ namespace OYAJSon {
                 epos = _FindNextSymbol(src, ARRAY_SYM_TAIL, spos);
                 if (epos == string_type::npos){
                     // Technically, we should have already accounted for this case, but better safe than sorry.
-                    throw JSonException::ParseSymbolMissing(ARRAY_SYM_TAIL);
+                    throw JSonException::ParseMissingSymbol(ARRAY_SYM_TAIL);
                 }
             }
 
@@ -976,6 +980,18 @@ namespace OYAJSon {
     // ----------------------------------------------------------------------------------------------
     // ----------------------------------------------------------------------------------------------
 
+    const unsigned int JSonException::ERR_PARSE_MALFORMED               = 1010;
+    const unsigned int JSonException::ERR_PARSE_INVALIDJSONCONTAINER    = 1011;
+    const unsigned int JSonException::ERR_PARSE_UNCLOSEDSTURCTURE       = 1012;
+    const unsigned int JSonException::ERR_PARSE_MISSINGSYMBOL           = 1013;
+    const unsigned int JSonException::ERR_PARSE_INVALIDSYMBOL           = 1014;
+    const unsigned int JSonException::ERR_PARSE_UNKNOWNVALUETYPE        = 1015;
+    const unsigned int JSonException::ERR_PARSE_MISSINGVALUE            = 1016;
+
+    const unsigned int JSonException::ERR_INVALIDJSONTYPE               = 1001;
+    const unsigned int JSonException::ERR_MISSINGKEY                    = 1002;
+    const unsigned int JSonException::ERR_INDEXOUTOFBOUNDS              = 1003;
+
     JSonException::JSonException(const string_type &msg, unsigned int code) : std::runtime_error(msg), m_code(code){}
 
     const char* JSonException::what() const throw(){
@@ -988,42 +1004,42 @@ namespace OYAJSon {
         return m_code;
     }
 
-    JSonException JSonException::InvalidType(JSonType expected, JSonType given){
+    JSonException JSonException::InvalidJSonType(JSonType expected, JSonType given){
         string_type msg = "Operation expecting JSonValue type " + JSonTypeToString(expected) + " but JSonValue is of type " + JSonTypeToString(given) + ".";
-        return JSonException(msg, 1001);
+        return JSonException(msg, JSonException::ERR_INVALIDJSONTYPE);
     }
 
-    JSonException JSonException::KeyNotInObject(const string_type &key){
+    JSonException JSonException::MissingKey(const string_type &key){
         string_type msg = "Key \"" + key +"\" not found in JSon Object.";
-        return JSonException(msg, 1002);
+        return JSonException(msg, JSonException::ERR_MISSINGKEY);
     }
 
     JSonException JSonException::IndexOutOfBounds(size_type index){
         std::stringstream ss;
         ss << "JSon Array index #" << index << " out of bounds.";
-        return JSonException(ss.str(), 1003);
+        return JSonException(ss.str(), JSonException::ERR_INDEXOUTOFBOUNDS);
     }
 
 
     JSonException JSonException::ParseMalformed(){
-        return JSonException("Parsed JSon appears malformed.", 1010);
+        return JSonException("Parsed JSon appears malformed.", JSonException::ERR_PARSE_MALFORMED);
     }
 
     JSonException JSonException::ParseInvalidJsonContainer(){
-        return JSonException("Parser expecting JSon Object \"{}\" or JSon Array \"[]\" container.", 1011);
+        return JSonException("Parser expecting JSon Object \"{}\" or JSon Array \"[]\" container.", JSonException::ERR_PARSE_INVALIDJSONCONTAINER);
     }
 
     JSonException JSonException::ParseUnclosedStructure(JSonType type){
         string_type msg = "Parser found unclosed structure type JSon " + JSonTypeToString(type) + ".";
-        return JSonException(msg, 1012);
+        return JSonException(msg, JSonException::ERR_PARSE_UNCLOSEDSTURCTURE);
     }
 
-    JSonException JSonException::ParseSymbolMissing(char_type symbol){
+    JSonException JSonException::ParseMissingSymbol(char_type symbol){
         string_type msg = "Parser failed to find expected symbol '" + string_type(&symbol) + "'.";
-        return JSonException(msg, 1013);
+        return JSonException(msg, JSonException::ERR_PARSE_MISSINGSYMBOL);
     }
 
-    JSonException JSonException::ParseInvalidSymbols(){
+    JSonException JSonException::ParseInvalidSymbol(){
         return JSonException("Parser found invalid symbols within JSon structure.", 1014);
     }
 
@@ -1035,11 +1051,11 @@ namespace OYAJSon {
             msg += value.substr(0, 10);
         }
         msg += "\".";
-        return JSonException(msg, 1015);
+        return JSonException(msg, JSonException::ERR_PARSE_UNKNOWNVALUETYPE);
     }
 
     JSonException JSonException::ParseMissingValue(){
-        return JSonException("JSon Object or Array expecting additional values, but none found.", 1016);
+        return JSonException("JSon Object or Array expecting additional values, but none found.", JSonException::ERR_PARSE_MISSINGVALUE);
     }
 
 
