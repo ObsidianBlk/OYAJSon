@@ -8,23 +8,24 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 #include(FindPkgConfig)
 
 # Set the include and link directories for all required libraries and source code.
-include_directories(${OYAJSon_SOURCE_DIR} ${OYAJSon_SOURCE_DIR}/OYAJSon)
-link_directories(${OYAJSon_SOURCE_DIR} ${OYAJSon_SOURCE_DIR}/OYAJSon)
+include_directories(${OYAJSon_SOURCE_DIR} ${OYAJSon_SOURCE_DIR}/Test)
+link_directories(${OYAJSon_SOURCE_DIR})
 
 # I believe this will call the correct shell script.
 # NOTE: Will update this later to handle Windows batch scripts.
 add_custom_command(
-    OUTPUT ${OYAJSon_SOURCE_DIR}/OYAJSon/OYAJSon_version.cpp
+    OUTPUT ${OYAJSon_SOURCE_DIR}/OYAJSon_version.cpp
     COMMAND ${OYAJSon_SOURCE_DIR}/scripts/version.sh ${OYAJSon_SOURCE_DIR}
 )
 
 set(core_source_files
     main.cpp
-    OYAJSon/OYAJSon.h
-    OYAJSon/OYAJSon.cpp
-    OYAJSon/OYAJSon_version.cpp
+    OYAJSon.h
+    OYAJSon.cpp
+    OYAJSon_version.cpp
 )
 
-add_executable(OYAJSon ${core_source_files})
-target_link_libraries(OYAJSon)
-install(TARGETS OYAJSon DESTINATION bin)
+add_library(OYAJSon SHARED OYAJSon.h OYAJSon.cpp OYAJSon_version.cpp)
+add_executable(OYAJSon_Test Test/test.cpp)
+target_link_libraries(OYAJSon_Test LINK_PUBLIC OYAJSon)
+install(TARGETS OYAJSon_Test DESTINATION bin)

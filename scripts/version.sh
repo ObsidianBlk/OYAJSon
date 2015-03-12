@@ -4,7 +4,7 @@ BASE_PATH="`pwd`"
 if ! [ -z "$1" ]; then
   BASE_PATH="$1"
 fi
-SOURCE_PATH="/OYAJSon/"
+SOURCE_PATH="/"
 
 VERSION_SOURCE_FILENAME="OYAJSon_version.cpp"
 

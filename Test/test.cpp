@@ -3,7 +3,7 @@
 #include <string>
 #include <map>
 #include <assert.h>
-#include "OYAJSon/OYAJSon.h"
+#include "../OYAJSon.h"
 
 
 std::string load_file(const std::string &src){
